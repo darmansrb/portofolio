@@ -106,7 +106,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Pre-flight: confirm all VPS secrets are set
+      - name: Pre-flight — confirm all VPS secrets are set
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
