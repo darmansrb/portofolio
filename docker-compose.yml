@@ -1,8 +1,12 @@
 services:
   portfolio:
-    image: portfolio:1.1
-    container_name: portfolio
+    container_name: devportfolio
     restart: unless-stopped
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: devportfolio:prod
 
     labels:
       - "traefik.enable=true"

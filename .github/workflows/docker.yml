@@ -121,13 +121,11 @@ jobs:
             echo "→ pulling latest source"
             git pull --ff-only origin main
 
-            echo "→ building image on VPS"
-            docker build \
-              --tag devportfolio:prod \
+            echo "→ building image on VPS (via compose)"
+            docker compose build \
+              --build-arg BUILDKIT_INLINE_CACHE=1 \
               --label org.opencontainers.image.revision=${{ github.sha }} \
-              --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
-              --load \
-              .
+              --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
             echo "→ restarting stack"
             docker compose up -d --remove-orphans
