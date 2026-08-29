@@ -37,7 +37,7 @@ While `allowJs: false` would indeed prevent the use of `.js` files in the projec
 
 HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
 
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
+If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR test.
 
 ```ts
 // store.ts
