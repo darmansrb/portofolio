@@ -6,8 +6,12 @@ on:
     paths-ignore:
       - '**.md'
       - '.commandcode/**'
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Optional reason (logged in the deploy step)'
+        required: false
+        default: 'manual deploy'
 
 # Allow only one concurrent deploy, queue others.
 concurrency:
@@ -15,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ---- 1. always lint + typecheck + build on every push/PR ----
+  # ---- 1. always lint + typecheck + build on every push ----
   ci:
     name: ci
     runs-on: ubuntu-latest
@@ -33,75 +37,13 @@ jobs:
         env:
           VITE_SITE_URL: https://dthrees.my.id
 
-  # ---- 2. Build the Docker image and upload the .tar as an artifact
-  #         whenever the commit message or PR title contains the keyword
-  #         "build" (case-insensitive) ----
-  image:
-    name: image
-    needs: ci
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      should-build: ${{ steps.gate.outputs.should-build }}
-    steps:
-      - id: gate
-        run: |
-          msg="${{ github.event.head_commit.message }}"
-          echo "Commit message: $msg"
-          if echo "$msg" | grep -qiE '\bbuild\b'; then
-            echo "should-build=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "should-build=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: actions/checkout@v5
-
-      - name: Set up Docker Buildx
-        if: steps.gate.outputs.should-build == 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build image
-        if: steps.gate.outputs.should-build == 'true'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: false
-          load: true
-          tags: devportfolio:prod
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          labels: |
-            org.opencontainers.image.title=devportfolio
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ github.event.repository.updated_at }}
-
-      - name: Save image to .tar
-        if: steps.gate.outputs.should-build == 'true'
-        run: |
-          mkdir -p out
-          docker save -o out/devportfolio-prod.tar devportfolio:prod
-          echo "image size: $(du -h out/devportfolio-prod.tar | cut -f1)"
-
-      - name: Upload image artifact
-        if: steps.gate.outputs.should-build == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: devportfolio-prod
-          path: out/devportfolio-prod.tar
-          retention-days: 7
-
-  # ---- 3. Deploy to the VPS: SSH in, pull the latest source, build the
-  #         image on the VPS, and restart the compose stack. The VPS is
-  #         assumed to already have the repo cloned and the `proxy` network
-  #         created. ----
+  # ---- 2. Deploy to the VPS: SSH in, pull the latest source, build the
+  #         image on the VPS via compose, and restart the stack.
+  #         Runs on every push to main and via manual dispatch. Skips on PRs. ----
   deploy:
     name: deploy
-    needs: image
-    if: needs.image.outputs.should-build == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -124,7 +66,9 @@ jobs:
           echo "VPS_APP_DIR=$VPS_APP_DIR"
           echo "VPS_SSH_KEY length: ${#VPS_SSH_KEY}"
 
-      - name: Deploy via SSH
+      - name: "Deploy via SSH"
+        env:
+          REASON: ${{ github.event.inputs.reason || format('push {0}', github.sha) }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -136,6 +80,7 @@ jobs:
           all_pipes: true
           script: |
             set -euxo pipefail
+            echo "==== deploy reason: $REASON ===="
             echo "==== [1/6] env ===="
             echo "whoami=$(whoami)  pwd=$(pwd)  date=$(date -u +%FT%TZ)"
             uname -a
@@ -149,7 +94,6 @@ jobs:
             echo "==== [3/6] docker version ===="
             docker --version
             docker compose version
-            docker info 2>&1 | head -5
 
             echo "==== [4/6] git pull ===="
             git fetch origin main
@@ -157,12 +101,11 @@ jobs:
             git log -1 --oneline
 
             echo "==== [5/6] docker compose build ===="
-            docker compose build \
-              --build-arg BUILDKIT_INLINE_CACHE=1
+            docker compose build
 
             echo "==== [6/6] docker compose up + status ===="
             docker compose up -d --remove-orphans
             sleep 3
             docker compose ps
-            docker compose logs --no-color --tail=50 devportfolio 2>&1 || true
+            docker compose logs --no-color --tail=80 devportfolio 2>&1 || true
             docker image prune -f
