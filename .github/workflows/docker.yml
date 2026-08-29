@@ -67,8 +67,6 @@ jobs:
           echo "VPS_SSH_KEY length: ${#VPS_SSH_KEY}"
 
       - name: "Deploy via SSH"
-        env:
-          REASON: ${{ github.event.inputs.reason || format('push {0}', github.sha) }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -77,8 +75,10 @@ jobs:
           command_timeout: 20m
           debug: true
           request_pty: true
+          envs: REASON
           script: |
             set -euxo pipefail
+            : "${REASON:=deploy}"
             echo "==== deploy reason: $REASON ===="
             echo "==== [1/6] env ===="
             echo "whoami=$(whoami)  pwd=$(pwd)  date=$(date -u +%FT%TZ)"
