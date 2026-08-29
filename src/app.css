@@ -1,0 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Archivo+Black&display=swap');
+
+:root {
+  --bg: #fef6e4;
+  --bg-alt: #f3d2c1;
+  --card: #ffffff;
+  --ink: #001858;
+  --ink-soft: #172c66;
+  --muted: #594d6b;
+  --accent: #ff5470;
+  --accent-2: #f3d2c1;
+  --accent-3: #9ebd6e;
+  --accent-4: #ffd803;
+  --accent-5: #00ebc7;
+  --border: #001858;
+  --shadow-x: 6px;
+  --shadow-y: 6px;
+  --shadow: var(--shadow-x) var(--shadow-y) 0 0 var(--border);
+
+  --sans: 'Space Grotesk', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --display: 'Archivo Black', system-ui, sans-serif;
+
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background:
+    radial-gradient(circle at 12% 18%, var(--accent-2) 0, transparent 22%),
+    radial-gradient(circle at 88% 12%, var(--accent-5) 0, transparent 18%),
+    radial-gradient(circle at 78% 88%, var(--accent-4) 0, transparent 24%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+a {
+  color: var(--ink);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--accent);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--display);
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin: 0;
+  line-height: 1.05;
+}
+
+h1 { font-size: clamp(2.4rem, 6vw, 4.6rem); }
+h2 { font-size: clamp(1.8rem, 3.5vw, 2.6rem); }
+h3 { font-size: 1.25rem; }
+
+p { margin: 0; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: var(--accent-4);
+  border: 2px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+#app {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+  #app { padding: 0 16px; }
+}
+
+/* ---------- shared neo-brutalism primitives ---------- */
+
+.brutal-card {
+  background: var(--card);
+  border: 3px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.brutal-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: calc(var(--shadow-x) + 2px) calc(var(--shadow-y) + 2px) 0 0 var(--border);
+}
+
+.brutal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--accent-4);
+  border: 3px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 18px;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.brutal-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: calc(var(--shadow-x) + 2px) calc(var(--shadow-y) + 2px) 0 0 var(--border);
+  background: var(--accent-5);
+  color: var(--ink);
+}
+
+.brutal-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 0 var(--border);
+}
+
+.brutal-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--accent-2);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.section {
+  padding: 80px 0;
+  scroll-margin-top: 80px;
+}
+
+@media (max-width: 640px) {
+  .section { padding: 56px 0; }
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.section-title h2 {
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+}
+
+.section-title .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--accent);
+  color: #fff;
+  border: 3px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  box-shadow: 3px 3px 0 0 var(--border);
+}
+
+.section-title .line {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* selection */
+::selection {
+  background: var(--accent);
+  color: #fff;
+}

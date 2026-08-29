@@ -1,0 +1,16 @@
+# User Taste Profile
+- Communicates in Indonesian (Bahasa Indonesia), casual/informal tone. Confidence: 0.95
+- Prefers concise, direct instructions with clear deliverables. Confidence: 0.7
+- Likes bold, distinctive design aesthetics (e.g., neo-brutalism — high contrast, hard borders, heavy offset shadows, bright colors, bold typography). Confidence: 0.85
+- Prioritizes visual appeal ("menarik") and readability/enjoyability ("enak di lihat dan di baca") in UI work. Confidence: 0.9
+- Prefers Svelte for web projects; chooses Vite + Svelte (not SvelteKit) for simple SPAs like portfolios. Confidence: 0.8
+- Prefers Docker Compose for running/deploying applications. Confidence: 0.85
+- Comfortable with static-site adapter pattern (adapter-static + Nginx). Confidence: 0.7
+- Standard portfolio sections: About, Projects, Experience, Education. Confidence: 0.85
+- Wants social/contact links present: email, LinkedIn, Instagram, GitHub. Confidence: 0.85
+- Expects a working, runnable deliverable (not just code snippets) — "jalankan pakai docker compose". Confidence: 0.9
+- Likes project scaffolding with clear file structure (components separated per section, data files, etc.). Confidence: 0.7
+- Organizes web projects under a `webbase/` parent directory in their workspace. Confidence: 0.7
+- Uses Traefik as reverse proxy with an external `proxy` Docker network for production deployments. Confidence: 0.85
+- Prefers separate production Docker Compose setup with environment-specific image tags (e.g., `:prod` suffix) and Traefik labels for routing. Confidence: 0.8
+- Prefers multi-stage Dockerfiles (Node build stage + nginx runtime stage) for static SPAs. Confidence: 0.75
