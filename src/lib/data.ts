@@ -81,8 +81,8 @@ export const socials: Social[] = [
 
 export const skills = [
   'Progress 4GL', 'Open Edge', 'React', 'Laravel', 'Kotlin',
-  'PHP', 'Docker', 'API', 'PostgreSQL', 'MySQL',
-  'Linux Server', 'Jetpack Compose',
+  'Golang', 'PHP', 'Docker', 'API', 'PostgreSQL', 'MySQL',
+  'ClickHouse', 'Python', 'Linux Server', 'Jetpack Compose',
 ]
 
 export const projects: Project[] = [

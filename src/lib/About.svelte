@@ -53,7 +53,7 @@
         </li>
         <li>
           <span class="k">{$t.about.metaStack}</span>
-          <span class="v">{skills.slice(0, 4).join(' · ')}</span>
+          <span class="v">{skills.slice(0, 5).join(' · ')}</span>
         </li>
         <li>
           <span class="k">{$t.about.metaCoffee}</span>
