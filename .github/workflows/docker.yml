@@ -31,91 +31,109 @@ jobs:
       - run: npm run check
       - run: npm run build
         env:
-          # Tell Vite the canonical site URL so it can bake into meta tags.
           VITE_SITE_URL: https://dthrees.my.id
 
-      - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist
-          retention-days: 7
-
-  # ---- 2. build & push Docker image only on push to main, OR when the
-  #         commit message / PR title contains the keyword "build" (case
-  #         insensitive) ----
-  docker:
-    name: docker
+  # ---- 2. Build the Docker image and upload the .tar as an artifact
+  #         whenever the commit message or PR title contains the keyword
+  #         "build" (case-insensitive) ----
+  image:
+    name: image
     needs: ci
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
-      should-push: ${{ steps.gate.outputs.should-push }}
+      should-build: ${{ steps.gate.outputs.should-build }}
     steps:
       - id: gate
         run: |
           msg="${{ github.event.head_commit.message }}"
           echo "Commit message: $msg"
           if echo "$msg" | grep -qiE '\bbuild\b'; then
-            echo "should-push=true" >> "$GITHUB_OUTPUT"
+            echo "should-build=true" >> "$GITHUB_OUTPUT"
           else
-            echo "should-push=false" >> "$GITHUB_OUTPUT"
+            echo "should-build=false" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
+        if: steps.gate.outputs.should-build == 'true'
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        if: steps.gate.outputs.should-push == 'true'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Extract metadata
-        if: steps.gate.outputs.should-push == 'true'
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/devportfolio
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=prod,enable={{is_default_branch}}
-            type=raw,value={{date 'YYYYMMDD-HHmmss'}}
-            type=sha,format=short
-
-      - name: Build and push
-        if: steps.gate.outputs.should-push == 'true'
+      - name: Build image
+        if: steps.gate.outputs.should-build == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
+          load: true
+          tags: devportfolio:prod
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.title=devportfolio
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.repository.updated_at }}
 
-  # ---- 3. (optional) notify ----
-  notify:
-    name: notify
-    needs: [ci, docker]
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print result
+      - name: Save image to .tar
+        if: steps.gate.outputs.should-build == 'true'
         run: |
-          echo "ci=${{ needs.ci.result }}  docker=${{ needs.docker.result }}"
-          if [ "${{ needs.docker.result }}" = "success" ]; then
-            echo "✅ image built and pushed to Docker Hub"
-          elif [ "${{ steps.gate.outputs.should-push }}" = "true" ]; then
-            echo "❌ docker build/push failed"
-            exit 1
-          else
-            echo "ℹ️  skipped docker build (no 'build' keyword in commit message)"
-          fi
+          mkdir -p out
+          docker save -o out/devportfolio-prod.tar devportfolio:prod
+          echo "image size: $(du -h out/devportfolio-prod.tar | cut -f1)"
+
+      - name: Upload image artifact
+        if: steps.gate.outputs.should-build == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: devportfolio-prod
+          path: out/devportfolio-prod.tar
+          retention-days: 7
+
+  # ---- 3. Deploy to the VPS: SSH in, pull the latest source, build the
+  #         image on the VPS, and restart the compose stack. The VPS is
+  #         assumed to already have the repo cloned and the `proxy` network
+  #         created. ----
+  deploy:
+    name: deploy
+    needs: image
+    if: needs.image.outputs.should-build == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            APP_DIR="${{ secrets.VPS_APP_DIR }}"
+            cd "$APP_DIR"
+
+            echo "→ pulling latest source"
+            git pull --ff-only origin main
+
+            echo "→ building image on VPS"
+            docker build \
+              --tag devportfolio:prod \
+              --label org.opencontainers.image.revision=${{ github.sha }} \
+              --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }} \
+              --load \
+              .
+
+            echo "→ restarting stack"
+            docker compose up -d --remove-orphans
+
+            echo "→ pruning dangling images (keep prod tag)"
+            docker image prune -f
+
+            echo "→ status"
+            docker ps --filter "name=devportfolio" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
